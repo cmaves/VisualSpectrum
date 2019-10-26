@@ -228,7 +228,8 @@ pub mod led {
     pub struct Controller {
        controller: rs_ws281x::Controller,
        invert: bool,
-       colors: [[u8; 4]; 4]
+       colors: [[u8; 4]; 4],
+       alg: Algorithm
     }
 
     impl Controller {
@@ -252,8 +253,13 @@ pub mod led {
             Controller {
                 controller: controller,
                 invert: invert,
-                colors: colors
+                colors: colors,
+                alg: Algorithm::Linear
             }
+        }
+        pub fn set_alg(mut self, alg: Algorithm) -> Self {
+            self.alg = alg;
+            self
         }
         pub fn display(mut self, source: audio::PendingProducer) -> Self {
             let mut active = source.activate().unwrap(); 
@@ -261,6 +267,7 @@ pub mod led {
             let led_num = self.controller.leds(0).len();
             let invert = self.invert;
             let colors = self.colors;
+            let alg = self.alg;
             thread::spawn(move || {
                 let mut planner = Radix4::new(256, false);
                 loop {
@@ -270,7 +277,7 @@ pub mod led {
                     };
                     // fatch spectrogram using ffft
                     let (left, right) = ss.spectrogram(&mut planner);
-                    if let Err(e) = sender.try_send(compute_4_bins(left,right,led_num,invert,&colors)) {
+                    if let Err(e) = sender.try_send(compute_4_bins(left,right,led_num,invert,&colors,alg)) {
                         match e {
                             mpsc::TrySendError::Full(_) => eprintln!("led render taking to long"),
                             mpsc::TrySendError::Disconnected(_) => break
@@ -297,7 +304,14 @@ pub mod led {
             self 
         }
     }
-    fn compute_4_bins(left: Vec<f32>, right: Vec<f32>, leds: usize, invert: bool, colors: &[[u8; 4]; 4]) -> Vec<[u8; 4]> {
+    #[derive(Copy,Clone)]
+    pub enum Algorithm {
+        Linear,
+        Quadratic
+    }
+    fn compute_4_bins(left: Vec<f32>, right: Vec<f32>, leds: usize, invert: bool, 
+                        colors: &[[u8; 4]; 4], alg: Algorithm) -> Vec<[u8; 4]> 
+    {
         let n_windows = left.len() / 256;
         let n_win = left.len() / 256;
         // average channels
@@ -328,17 +342,35 @@ pub mod led {
         r_bins[3] = max(&r_avg[21..256]);
 
         // scale to range of 0-100 floating point number
-        for i in 0..4 {
-            l_bins[i] = (l_bins[i]+ 40.0) * 1.000;
-            r_bins[i] = (r_bins[i] + 40.0) * 1.000;
-            if l_bins[i] > 100.0 {
-                l_bins[i] = 100.0;
-            } 
-            if r_bins[i] > 100.0 {
-                r_bins[i] = 100.0;
-            } 
+        match alg { 
+            Linear => { 
+                for i in 0..4 {
+                    l_bins[i] = (l_bins[i]+ 40.0) * 2.000;
+                    r_bins[i] = (r_bins[i] + 40.0) * 2.000;
+                    if l_bins[i] > 100.0 {
+                        l_bins[i] = 100.0;
+                    } 
+                    if r_bins[i] > 100.0 {
+                        r_bins[i] = 100.0;
+                    } 
+                }
+            },
+            Quadratic => {
+                for i in 0..4 {
+                    l_bins[i] = (l_bins[i]+ 40.0) / 5.000;
+                    l_bins[i] *= l_bins[i]; // square it 
+                    r_bins[i] = (r_bins[i] + 40.0) / 5.000;
+                    r_bins[i] *= r_bins[i]; // square it 
+                    if l_bins[i] > 100.0 {
+                        l_bins[i] = 100.0;
+                    } 
+                    if r_bins[i] > 100.0 {
+                        r_bins[i] = 100.0;
+                    } 
+                }
+            }
         }
-        //println!("{:?} {:?}", l_bins, r_bins);
+        println!("{:?} {:?}", l_bins, r_bins);
 
         let part_len = leds / 8; // length of each bin representing a color
         let ratio = part_len as f32 / 100.0; // the ratio between the 0-100 range and the leds it

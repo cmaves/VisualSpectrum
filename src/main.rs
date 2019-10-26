@@ -7,7 +7,7 @@ fn main() {
     let brightness = 
         f32::from_str(args.value_of("brightness").unwrap()).unwrap(); // neither unwrap should ever fail
     let pp = audio::PendingProducer::new_jack(1024).unwrap();
-    let con = led::Controller::new(18, 300, false, brightness);
+    let con = led::Controller::new(18, 300, false, brightness).set_alg(led::Algorithm::Quadratic);
     con.display(pp);    
     
 }
