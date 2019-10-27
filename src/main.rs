@@ -7,7 +7,12 @@ fn main() {
     let brightness = 
         f32::from_str(args.value_of("brightness").unwrap()).unwrap(); // neither unwrap should ever fail
     let pp = audio::PendingProducer::new_jack(1024).unwrap();
-    let con = led::Controller::new(18, 300, false, brightness).set_alg(led::Algorithm::Quadratic);
+    let mut con = led::Controller::new(18, 300, false, brightness);
+    match args.value_of("scaling_alg").unwrap() {
+        "linear" => con = con.set_alg(led::Algorithm::Linear),
+        "quadratic" => con = con.set_alg(led::Algorithm::Quadratic),
+        _ => panic!("Unimplemented value for scaling_alg")
+    }
     con.display(pp);    
     
 }
@@ -35,6 +40,16 @@ fn parse_args<'a>() -> clap::ArgMatches<'a> {
                         Err(_) => Err("Brightness should be a float".to_string())
                     }
                 })
+        )
+        .arg(
+            clap::Arg::with_name("scaling_alg")
+                .short("s")
+                .long("scaling")
+                .takes_value(true)
+                .value_name("ALGORITHM")
+                .help("Sets the alogorithm used scale audio input for the program to visual.")
+                .possible_values(&["linear", "quadratic"])
+                .default_value("quadratic")
         )
         .get_matches()
 }

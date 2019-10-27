@@ -341,9 +341,9 @@ pub mod led {
         r_bins[2] = max(&r_avg[6..21]);
         r_bins[3] = max(&r_avg[21..256]);
 
-        // scale to range of 0-100 floating point number
+        // scale to range of (-inf, 100] floating point number
         match alg { 
-            Linear => { 
+            Algorithm::Linear => { 
                 for i in 0..4 {
                     l_bins[i] = (l_bins[i]+ 40.0) * 2.000;
                     r_bins[i] = (r_bins[i] + 40.0) * 2.000;
@@ -355,12 +355,17 @@ pub mod led {
                     } 
                 }
             },
-            Quadratic => {
+            Algorithm::Quadratic => {
                 for i in 0..4 {
                     l_bins[i] = (l_bins[i]+ 40.0) / 5.000;
-                    l_bins[i] *= l_bins[i]; // square it 
+                    // only square if  over zero because negative will become positive otherwise
+                     if l_bins[i] > 0.0 { 
+                        l_bins[i] *= l_bins[i]; // square it 
+                    }
                     r_bins[i] = (r_bins[i] + 40.0) / 5.000;
-                    r_bins[i] *= r_bins[i]; // square it 
+                    if r_bins[i] > 0.0 {
+                        r_bins[i] *= r_bins[i]; // square it 
+                    }
                     if l_bins[i] > 100.0 {
                         l_bins[i] = 100.0;
                     } 
@@ -370,7 +375,7 @@ pub mod led {
                 }
             }
         }
-        println!("{:?} {:?}", l_bins, r_bins);
+        //println!("{:?} {:?}", l_bins, r_bins);
 
         let part_len = leds / 8; // length of each bin representing a color
         let ratio = part_len as f32 / 100.0; // the ratio between the 0-100 range and the leds it
