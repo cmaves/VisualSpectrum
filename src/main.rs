@@ -1,20 +1,25 @@
 use clap;
 use spectrum::audio;
 use spectrum::led;
+use spectrum::midi;
+use spectrum::visualmidi::{MidiCon,MidiRenderer};
 use std::str::FromStr;
 fn main() {
+    let jack_client = midi::new_jack().unwrap();
+    let midi_con = MidiCon::new(18, 300, false, 1.0, false);
+    midi_con.display(jack_client);
+    return;
     let args = parse_args();
     let brightness = 
         f32::from_str(args.value_of("brightness").unwrap()).unwrap(); // neither unwrap should ever fail
     let pp = audio::PendingProducer::new_jack(1024).unwrap();
-    let mut con = led::Controller::new(18, 300, false, brightness);
+    let mut con = led::Controller::new(18, 300, false, brightness, true);
     match args.value_of("scaling_alg").unwrap() {
         "linear" => con = con.set_alg(led::Algorithm::Linear),
         "quadratic" => con = con.set_alg(led::Algorithm::Quadratic),
         _ => panic!("Unimplemented value for scaling_alg")
     }
-    con.display(pp);    
-    
+    con.display(pp);        
 }
 
 fn parse_args<'a>() -> clap::ArgMatches<'a> {
