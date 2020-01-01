@@ -113,10 +113,10 @@ impl InactiveSource for Client {
 
 impl ProcessHandler for MidiHandler {
     fn process(&mut self, client: &jack::Client, ps: &jack::ProcessScope) -> Control {
-    let time = client.frames_to_time(ps.last_frame_time());
+    let time = ps.last_frame_time();
         for i in self.input.iter(ps) {
             let bytes = i.bytes;
-            let mm = raw_to_mm(i, time + client.frames_to_time(i.time));
+            let mm = raw_to_mm(i, time + client.frames_to_time(i.time + time));
             if let MidiEvent::RealTime(u) = mm.event {
                 if u == 0x8  || u == 0xE {
                     continue;
