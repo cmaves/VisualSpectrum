@@ -3,7 +3,7 @@ use crate::audio;
 use rustfft::algorithm::Radix4;
 use std::sync::mpsc;
 use std::thread;
-use rand::{Rng};
+use random_color::RandomColor;
 
 //R color order
 const COLORS: [[u8; 4]; 4] = [[0, 0, 255, 0],
@@ -267,15 +267,15 @@ fn max(s: &[f32]) -> f32 {
     ret
 }
 pub struct PulseCalc {
-    color: [f32; 4],
-    rng: rand::rngs::ThreadRng,
+    color: [u8; 4],
+    rc: RandomColor,
     weight: f32
 }
 impl PulseCalc {
     pub fn new(weight: f32) -> Self {
         let mut ret = PulseCalc {
-            color: [0.0; 4],
-            rng: rand::thread_rng(),
+            color: [0; 4],
+            rc: RandomColor::new(),
             weight: weight
         };
         ret.new_color();
@@ -286,21 +286,9 @@ impl PulseCalc {
             Get three rand f32 with range [0,255) with exponential distribution (or maybe log 
             I'm not sure about the name)
         */
-        let mut rands: [f32; 3] = [0.0; 3];
-        let mut lt_zero = true;
-        while lt_zero {
-            rands = self.rng.gen();
-            for i in 0..3 {
-                rands[i] = 2.0_f32.powf(rands[i] * 4.0 ) * 16.0;
-                //rands[i] = 255.00 * rands[i];
-                if rands[i] > 1.0 {
-                    lt_zero = false;
-                }
-            }
-        }
-        self.color = calc_nths(rands);
+        let rand = self.rc.to_rgb_array();
         for i in 0..3 {
-            if self.color[i] < 0.0 { self.color[i] = 0.0 };
+            self.color[i] = rand[i] as u8;
         }
         eprintln!("{:?}", self.color);
     }
@@ -310,8 +298,7 @@ impl PulseCalc {
         let a_diff = (half as isize - cap as isize).abs() as usize; // absoulute difference
         let weight = (half - a_diff) as f32; // distance from max brightness
         let weight = linear_to_log(weight / (half as f32)) * self.weight;
-        [(self.color[0] * weight) as u8, (self.color[1] * weight) as u8, 
-            (self.color[2] * weight) as u8, 0]
+        [(self.color[0] as f32  * weight) as u8, (self.color[1] as f32  * weight) as u8, (self.color[2] as f32 * weight) as u8, 0]
     }
 }
 fn linear_to_log(input: f32) -> f32 {

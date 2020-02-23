@@ -1,5 +1,5 @@
 use crate::audio::{Notifications,SpectrumError};
-use jack::{AsyncClient,Client,ClientOptions,Control,MidiIn,Port,ProcessHandler,RawMidi};
+use jack::{AsyncClient,Client,Control,MidiIn,Port,ProcessHandler,RawMidi};
 use std::sync::mpsc::{sync_channel,Receiver,SyncSender,TryRecvError};
 
 pub struct MidiActive {
@@ -115,8 +115,7 @@ impl ProcessHandler for MidiHandler {
     fn process(&mut self, client: &jack::Client, ps: &jack::ProcessScope) -> Control {
     let time = ps.last_frame_time();
         for i in self.input.iter(ps) {
-            let bytes = i.bytes;
-            let mm = raw_to_mm(i, time + client.frames_to_time(i.time + time));
+            let mm = raw_to_mm(i, client.frames_to_time(i.time + time));
             if let MidiEvent::RealTime(u) = mm.event {
                 if u == 0x8  || u == 0xE {
                     continue;
@@ -133,8 +132,8 @@ pub struct MidiHandler {
     sender: SyncSender<MidiMessage>,
     input: Port<MidiIn>,
     frame_len: u64,
-    fps: u32,
     count: u64,
+    fps: u32
 }
 pub fn new_jack() -> Result<Client, SpectrumError> {
         match jack::Client::new("spectrum", jack::ClientOptions::NO_START_SERVER) {

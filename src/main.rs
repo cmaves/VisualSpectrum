@@ -4,11 +4,14 @@ use spectrum::led;
 use spectrum::midi;
 use spectrum::visualmidi::{MidiCon,MidiRenderer};
 use std::str::FromStr;
-fn main() {
+fn main2() {
     let jack_client = midi::new_jack().unwrap();
-    let midi_con = MidiCon::new(18, 300, false, 1.0, false);
+    let mut midi_con = MidiCon::new(18, 144, false);
+    midi_con.set_verbose(true);
     midi_con.display(jack_client);
-    return;
+}
+fn main() {
+    main2();
     let args = parse_args();
     let brightness = 
         f32::from_str(args.value_of("brightness").unwrap()).unwrap(); // neither unwrap should ever fail
