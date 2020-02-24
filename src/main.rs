@@ -6,7 +6,7 @@ use spectrum::visualmidi::{MidiCon,MidiRenderer};
 use std::str::FromStr;
 fn main2() {
     let jack_client = midi::new_jack().unwrap();
-    let mut midi_con = MidiCon::new(18, 144, false);
+    let mut midi_con = MidiCon::new(18, 288, false);
     midi_con.set_verbose(true);
     midi_con.display(jack_client);
 }

@@ -57,7 +57,7 @@ pub struct LedConfigData {
 }
 impl Default for LedConfigData {
     fn default() -> Self {  
-        LedConfigData { brightness: 255, fade_out: 5000000, fade_in: 200000, invert: false }
+        LedConfigData { brightness: 255, fade_out: 3000000, fade_in: 200000, invert: false }
     }
 }
 impl LedConfig for LedConfigData {
@@ -145,7 +145,7 @@ impl Note {
         } else {
             match cur_time.checked_sub(self.off_time) {
                 Some(v) => { // the note is off
-                    (self.off_time - self.on_time) + v * 5
+                    (self.off_time - self.on_time) + v * 10
                 },
                 None => { // the note has been set to off but the time has not elapsed yet
                     cur_time - self.on_time
@@ -191,8 +191,8 @@ impl Note {
         }
         true 
     }
-    fn set_off_time<T: LedConfig>(&mut self, off_time: u64, config: &T) {
-        if ! self.on { return; }
+    fn set_off_time<T: LedConfig>(&mut self, off_time: u64, config: &T) -> bool {
+        if ! self.on { return false; }
         let min = self.on_time + config.get_fade_in() as u64;
         self.off_time = if off_time > min {
             off_time 
@@ -200,6 +200,7 @@ impl Note {
             min
         };
         self.on = false;
+        true
     }
 }
 
@@ -235,8 +236,7 @@ impl<T, U, V> MidiRenderer<T> for MidiCon
                         MidiEvent::NoteOff(n,_) => {
                             for note in notes.iter_mut() {
                                 if note.note == n { 
-                                    note.set_off_time(mm.time, &config);
-                                    break;
+                                     if note.set_off_time(mm.time, &config) { break; }
                                 }
                             }
                         },
